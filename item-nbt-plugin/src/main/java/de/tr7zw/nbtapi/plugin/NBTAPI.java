@@ -11,7 +11,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import de.tr7zw.changeme.nbtapi.NbtApiException;
 import de.tr7zw.changeme.nbtapi.utils.MinecraftVersion;
-import de.tr7zw.changeme.nbtapi.utils.VersionChecker;
 import de.tr7zw.changeme.nbtapi.utils.nmsmappings.ClassWrapper;
 import de.tr7zw.changeme.nbtapi.utils.nmsmappings.ReflectionMethod;
 import de.tr7zw.nbtapi.plugin.tests.GameprofileTest;
@@ -158,7 +157,6 @@ public class NBTAPI extends JavaPlugin {
         // new MetricsLite(this); The metrics moved into the API
         if (getConfig().getBoolean("silentquickstart")) {
             // we are silent, won't check anything or pre-init
-            VersionChecker.hideOk = true;
             return;
         }
         MinecraftVersion.hasGsonSupport(); // init gson(if it hasn't already)

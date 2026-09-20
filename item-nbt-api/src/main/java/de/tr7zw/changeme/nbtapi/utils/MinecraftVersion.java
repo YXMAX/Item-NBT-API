@@ -3,18 +3,8 @@ package de.tr7zw.changeme.nbtapi.utils;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import org.bstats.bukkit.Metrics;
-import org.bstats.charts.DrilldownPie;
-import org.bstats.charts.SimplePie;
 import org.bukkit.Bukkit;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.java.JavaPlugin;
-
-import de.tr7zw.changeme.nbtapi.utils.nmsmappings.ClassWrapper;
-import de.tr7zw.changeme.nbtapi.utils.nmsmappings.ReflectionMethod;
 
 /**
  * This class acts as the "Brain" of the NBTApi. It contains the main logger for
@@ -46,7 +36,7 @@ public enum MinecraftVersion {
     /**
      * Logger used by the api
      */
-    private static Logger logger = Logger.getLogger("NBTAPI");
+    private static Logger logger = Logger.getLogger("PlayerInv");
 
     // NBT-API Version
     protected static final String VERSION = "2.16.0";
@@ -154,10 +144,10 @@ public enum MinecraftVersion {
         }
         try {
             final String ver = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
-            logger.info("[NBTAPI] Found Minecraft: " + ver + "! Trying to find NMS support");
+            logger.info("Found Minecraft: " + ver + "! Trying to find NMS support");
             version = MinecraftVersion.valueOf(ver.replace("v", "MC"));
         } catch (Exception ex) {
-            logger.info("[NBTAPI] Found Minecraft: " + Bukkit.getServer().getBukkitVersion().split("-")[0]
+            logger.info("Found Minecraft: " + Bukkit.getServer().getBukkitVersion().split("-")[0]
                     + "! Trying to find NMS support");
             version = VERSION_TO_REVISION.get(Bukkit.getServer().getBukkitVersion().split("-")[0]);
             if (version == null) {
@@ -177,142 +167,17 @@ public enum MinecraftVersion {
             }
         }
         if (version != UNKNOWN) {
-            logger.info("[NBTAPI] NMS support '" + version.name() + "' loaded!");
+            logger.info("NMS support '" + version.name() + "' loaded!");
         } else {
-            logger.warning("[NBTAPI] This Server-Version(" + Bukkit.getServer().getBukkitVersion()
-                    + ") is not supported by this NBT-API Version(" + VERSION + ") located in "
-                    + VersionChecker.getPlugin()
+            logger.warning("This Server-Version(" + Bukkit.getServer().getBukkitVersion()
+                    + ") is not supported by this NBT-API Version(" + VERSION + ") in PlayerInv"
                     + ". The NBT-API will try to work as good as it can! Some functions may not work!");
         }
-        init();
         return version;
     }
 
     public static String getNBTAPIVersion() {
         return VERSION;
-    }
-
-    private static void init() {
-        // Maven's Relocate is clever and changes strings, too. So we have to use this
-        // little "trick" ... :D (from bStats)
-        final String defaultPackage = new String(new byte[] { 'd', 'e', '.', 't', 'r', '7', 'z', 'w', '.', 'c', 'h',
-                'a', 'n', 'g', 'e', 'm', 'e', '.', 'n', 'b', 't', 'a', 'p', 'i', '.', 'u', 't', 'i', 'l', 's' });
-        final String reservedPackage = new String(new byte[] { 'd', 'e', '.', 't', 'r', '7', 'z', 'w', '.', 'n', 'b',
-                't', 'a', 'p', 'i', '.', 'u', 't', 'i', 'l', 's' });
-        try {
-            if (hasGsonSupport() && !bStatsDisabled) {
-                Plugin plugin = Bukkit.getPluginManager().getPlugin(VersionChecker.getPlugin());
-                if (plugin != null && plugin instanceof JavaPlugin) {
-                    getLogger()
-                            .info("[NBTAPI] Using the plugin '" + plugin.getName() + "' to create a bStats instance!");
-                    Metrics metrics = new Metrics((JavaPlugin) plugin, 1058);
-                    metrics.addCustomChart(new SimplePie("nbtapi_version", () -> {
-                        return VERSION;
-                    }));
-                    metrics.addCustomChart(new DrilldownPie("nms_version", () -> {
-                        Map<String, Map<String, Integer>> map = new HashMap<>();
-                        Map<String, Integer> entry = new HashMap<>();
-                        entry.put(Bukkit.getName(), 1);
-                        map.put(getVersion().name(), entry);
-                        return map;
-                    }));
-                    metrics.addCustomChart(new SimplePie("shaded", () -> {
-                        return Boolean.toString(!"NBTAPI".equals(VersionChecker.getPlugin()));
-                    }));
-                    metrics.addCustomChart(new SimplePie("server_software", () -> {
-                        return Bukkit.getName();
-                    }));
-                    metrics.addCustomChart(new SimplePie("parent_plugin", () -> {
-                        return VersionChecker.getPluginforBStats();
-                    }));
-                    metrics.addCustomChart(new SimplePie("parent_plugin_type", () -> {
-                        return VersionChecker.getPluginType();
-                    }));
-                    metrics.addCustomChart(new SimplePie("special_environment", () -> {
-                        if (isFoliaPresent()) {
-                            return "Folia";
-                        } else if (isForgePresent()) {
-                            return "Forge";
-                        } else if (isFabricPresent()) {
-                            return "Fabric";
-                        } else if (isNeoForgePresent()) {
-                            return "NeoForge";
-                        } else {
-                            return "None";
-                        }
-                    }));
-                    metrics.addCustomChart(new SimplePie("bindings_check", () -> {
-                        
-                        boolean failedBinding = false;
-                        for (ClassWrapper c : ClassWrapper.values()) {
-                            if (c.isEnabled() && c.getClazz() == null) {
-                                failedBinding = true;
-                            }
-                        }
-                        for (ReflectionMethod method : ReflectionMethod.values()) {
-                            if (method.isCompatible() && !method.isLoaded()) {
-                                failedBinding = true;
-                            }
-                        }
-                        
-                        return failedBinding ? "Failed" : "Pass";
-                    }));
-                } else if (plugin == null) {
-                    getLogger().info("[NBTAPI] Unable to create a bStats instance!!");
-                }
-            }
-        } catch (Exception ex) {
-            logger.log(Level.WARNING, "[NBTAPI] Error enabling Metrics!", ex);
-        }
-
-        if (hasGsonSupport() && !updateCheckDisabled)
-            new Thread(() -> {
-                try {
-                    VersionChecker.checkForUpdates();
-                } catch (Exception ex) {
-                    logger.log(Level.WARNING, "[NBTAPI] Error while checking for updates! Error: " + ex.getMessage());
-                }
-            }).start();
-        if (!disablePackageWarning && MinecraftVersion.class.getPackage().getName().equals(defaultPackage)) {
-            logger.warning(
-                    "#########################################- NBTAPI -#########################################");
-            logger.warning(
-                    "The NBT-API package has not been moved! This *will* cause problems with other plugins containing");
-            logger.warning(
-                    "a different version of the api! Please read the guide on the plugin page on how to get the");
-            logger.warning(
-                    "Maven Shade plugin to relocate the api to your personal location! If you are not the developer,");
-            logger.warning("please check your plugins and contact their developer, so they can fix this issue.");
-            logger.warning(
-                    "#########################################- NBTAPI -#########################################");
-        }
-        if (!disablePackageWarning && !"NBTAPI".equals(VersionChecker.getPlugin())) { // we are not the nbtapi, check
-                                                                                      // for common shading errors
-            if (!"de.tr7zw.nbtapi.utils".equals(reservedPackage)) {
-                logger.warning(
-                        "#########################################- NBTAPI -#########################################");
-                logger.warning(
-                        "The NBT-API inside " + VersionChecker.getPlugin() + " is the plugin version, not the API!");
-                logger.warning(
-                        "The plugin itself should never be shaded! Remove the `-plugin` from the dependency and fix your shading setup.");
-                logger.warning(
-                        "For more info check: https://github.com/tr7zw/Item-NBT-API/wiki/Using-Maven#option-2-shading-the-nbt-api-into-your-plugin");
-                logger.warning(
-                        "#########################################- NBTAPI -#########################################");
-                return; // don't also print the second error
-            }
-            if (MinecraftVersion.class.getPackage().getName().equals("de.tr7zw.nbtapi.utils")) {
-                logger.warning(
-                        "#########################################- NBTAPI -#########################################");
-                logger.warning(
-                        "The NBT-API inside " + VersionChecker.getPlugin() + " is located at 'de.tr7zw.nbtapi.utils'!");
-                logger.warning(
-                        "This package name is reserved for the official NBTAPI plugin, and not intended to be used for shading!");
-                logger.warning("Please change the relocate to something else. For example: com.example.util.nbtapi");
-                logger.warning(
-                        "#########################################- NBTAPI -#########################################");
-            }
-        }
     }
 
     /**
